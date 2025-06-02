@@ -5,9 +5,7 @@ import pandas as pd
 #-------------------------------------------------------------------------------------------------------------------------#
 #for linux import package
 import sys, os, platform
-file_lst = ['/home/haominwe/code/D-Transformer/',
-            'D:\Study\Lab\project\CMU project\haystac\temp_sync\D-Transformer',
-            '/jet/home/hwen3/code/D-Transformer/']
+file_lst = ['your_project_directory']
 for file in file_lst:
     sys.path.append(file)
     sys.path.extend([os.path.join(root, name) for root, dirs, _ in os.walk(file) for name in dirs])
@@ -29,9 +27,6 @@ def process_batch(batch, model, device, params):
     # input_seq, target_seq, position, u_emb, uid = batch
     return model.loss(*to_device(batch, device))
 
-
-
-
 def test_model_with_loss(model, test_loader, device, params, save2file, mode):
 
     model.eval()
@@ -49,10 +44,9 @@ def test_model_with_loss(model, test_loader, device, params, save2file, mode):
 
             input_seq, target_seq, position, u_emb, uid = to_device(batch, device)
 
-            # pred = model(input_seq, position, u_emb, return_raw=False)
             T = params.get('T', 1)
             if T == 1:
-                pred = model(input_seq, position, u_emb, return_raw=False)
+                pred, _ = model(input_seq, position, u_emb, return_raw=False)
             else:
                 # print('sample number:', T)
                 pred = model.forward_avg(input_seq, position, u_emb, n_sample=T)

@@ -108,7 +108,7 @@ class USTAD(nn.Module):
         # token embeddings, there are four token types: KNOWN_TOKEN = 0, MASK_TOKEN = 1,  UNKNOWN_TOKEN = 2, PAD_TOKEN = 3
         self.token_emb = nn.Embedding(4, self.d_h)
 
-    def forward(self, input_seq, position, u, return_raw = True):
+    def forward(self, input_seq, position, u, return_raw = True, return_emb = False):
         """
         The forward function
         params:
@@ -165,9 +165,6 @@ class USTAD(nn.Module):
 
 
         # embed user information
-        # u = u.float()
-        # user_e = self.emb_user(u)
-        # user_e = repeat(user_e, 'B d_h -> B L d_h', L = L)
         user_e = None
 
         # positional embedding
@@ -190,6 +187,8 @@ class USTAD(nn.Module):
 
         if self.args['user_mode'] == 'after_transformer':
             h += user_e
+
+        event_emb = h
 
         # decode all continous features
         pred_con = self.dec_con(h)
@@ -216,6 +215,8 @@ class USTAD(nn.Module):
             pred_dis_mu.append(mu)
             pred_dis_sigma.append(sigma)
 
+        if return_emb:
+            return event_emb
 
         if return_raw:
             # note: make sure the return here follows the order in DISCRETE_FEATURE_NAME
@@ -226,7 +227,8 @@ class USTAD(nn.Module):
             pred = [pred_con] + pred_dis
             pred = torch.cat(pred, dim=-1)
             return pred
-
+        
+        
     def sample(self, input_seq, position, u, return_raw = True, n_sample = 5):
         B = input_seq.shape[0]
         # input_seq = input_seq.repeat(n_sample, 1, 1, 1)
@@ -322,8 +324,6 @@ class USTAD(nn.Module):
             mu = rearrange(mu, 'B L N -> (B L) N')
             sigma = rearrange(sigma, 'B L N -> (B L) N')
 
-            # prob_total = torch.zeros((num_samples, mu.shape[0], mu.shape[1]))
-            # prob_total = rearrange(torch.zeros_like(mu).unsqueeze(0), '1 X N -> S X N', S = num_samples)
             prob_total = torch.zeros_like(mu).unsqueeze(0).expand(num_samples, -1, -1)
             for t in range(num_samples):
                 epsilon = torch.randn_like(sigma)

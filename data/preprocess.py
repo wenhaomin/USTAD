@@ -7,7 +7,7 @@ import sys
 import os
 import platform
 
-file = 'D:\Study\Lab\project\CMU project\haystac\temp_sync\D-Transformer' if platform.system() == 'Windows'  else '/data/shurui/D-Transformer/'
+file = 'your_project_directory'
 sys.path.append(file)
 sys.path.extend([os.path.join(root, name) for root, dirs, _ in os.walk(file) for name in dirs])
 #-------------------------------------------------------------------------------------------------------------------------#
