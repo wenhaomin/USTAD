@@ -1,0 +1,1 @@
+[{"idx": 0, "name": "x", "type": "continuous"}, {"idx": 1, "name": "y", "type": "continuous"}, {"idx": 2, "name": "start_time_minute", "type": "continuous"}, {"idx": 3, "name": "stay_duration", "type": "continuous"}, {"idx": 4, "name": "poi", "type": "discrete"}, {"idx": 5, "name": "dow", "type": "discrete"}]

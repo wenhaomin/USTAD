@@ -5,7 +5,7 @@
 import sys
 import os
 import platform
-file = 'your_project_directory'
+file = 'your_project_directory'  # replace with your project directory
 sys.path.append(file)
 sys.path.extend([os.path.join(root, name) for root, dirs, _ in os.walk(file) for name in dirs])
 #-------------------------------------------------------------------------------------------------------------------------#
@@ -22,8 +22,6 @@ from collections import defaultdict
 
 import datetime
 from datetime import timedelta
-
-
 
 import torch
 from torch import nn
@@ -52,18 +50,6 @@ POSITION_LIST = [
     {'idx': 2, 'name': 'day_pos'},
 ]
 position2idx = {f['name']: f['idx'] for f in POSITION_LIST}
-
-
-# Feature2Idx = {f['name']:f['idx']  for f in FEATURE_LIST} # map the feature name to its index in the numpy array
-
-# CONTINUOUS_FEATURE_NAME = [f['name'] for f in FEATURE_LIST if f['type'] == 'continuous'] # feature name of all continuous features
-# CONTINUOUS_FEATURE_IDX = [f['idx'] for f in FEATURE_LIST if f['type'] == 'continuous']
-
-# DISCRETE_FEATURE_NAME = [f['name'] for f in FEATURE_LIST if f['type'] == 'discrete']
-# DISCRETE_FEATURE_IDX = [f['idx'] for f in FEATURE_LIST if f['type'] == 'discrete']
-
-# only need to normalize continous features that need to be predicted
-# NeedNormFeature = CONTINUOUS_FEATURE_NAME[:]# only continuous features need to be normalized
 
 
 def get_day_of_week(date_str):
@@ -148,17 +134,6 @@ class Denormalizer(nn.Module):
         else:
             raise NotImplementedError(self.norm_type)
         return x_col
-
-    # def forward(self, select_cols, arr):
-    #     """ Denormalize the input batch. """
-    #     if isinstance(arr, torch.Tensor):
-    #         x = torch.clone(arr)
-    #     else:
-    #         x = np.copy(arr)
-    #     for col, name in zip(self.feat_cols, self.feat_names):
-    #         if col in select_cols:
-    #             x[..., col] = self._denorm_col(x[..., col], name)
-    #     return x
 
     def forward(self, arr):
         """ Denormalize the input batch. """
@@ -281,9 +256,6 @@ class EventDataset(object):
 
         position = np.stack((seq_pos, within_day_pos, day_pos), axis=0)
 
-        # position = np.zeros(X_len) # position encoding
-        # for i in range(X_len):
-        #     position[i] = i+1
 
         return {'X': X, 'X_len': X_len, 'uid': uid, 'position': position}
         # note: if new information is added, remember to add the key into feature_lst in results_merge function below
@@ -390,20 +362,31 @@ class EventDataset(object):
         # if not os.path.exists(self.stay_stat_path):
         #     df.describe().to_csv(self.stay_stat_path)
 
-        # convert the discrete features to id
-        discrete_map = {}
-        # for f in DISCRETE_FEATURE_NAME:
-        for fea in FEATURE_LIST:
-            f, f_type = fea['name'], fea['type']
-            if f_type!= 'discrete': continue
-            df[f], unique_categories = pd.factorize(df[f])
-            # Create a mapping dictionary
-            mapping = {idx: category for idx, category in enumerate(unique_categories)}
-            discrete_map[f] = mapping
-        # save the discrete mapping to file
-        dir_check(self.discrete_map_path)
-        with open(self.discrete_map_path, 'w') as fp:
-            json.dump(discrete_map, fp)
+        if os.path.exists(self.discrete_map_path):
+            with open(self.discrete_map_path, 'r') as fp:
+                discrete_map = json.load(fp)
+            for f, mapping in discrete_map.items():
+                # Create a reverse mapping from category to index
+                reverse_mapping = {v: int(k) for k, v in mapping.items()}
+                # Apply the mapping to the DataFrame
+                if self.is_test:
+                    df[f] = df[f].apply(lambda x: reverse_mapping[x] if x in reverse_mapping else 1).astype(int)
+                else:
+                    df[f] = df[f].map(reverse_mapping).astype(int)
+        else:
+            # convert the discrete features to id
+            discrete_map = {}
+            for fea in FEATURE_LIST:
+                f, f_type = fea['name'], fea['type']
+                if f_type!= 'discrete': continue
+                df[f], unique_categories = pd.factorize(df[f])
+                # Create a mapping dictionary
+                mapping = {idx: category for idx, category in enumerate(unique_categories)}
+                discrete_map[f] = mapping
+            # save the discrete mapping to file
+            dir_check(self.discrete_map_path)
+            with open(self.discrete_map_path, 'w') as fp:
+                json.dump(discrete_map, fp)
 
         # get the dates for train, val and test, according to the parameter type
         if isinstance(self.params['train_ratio'], float):
@@ -427,19 +410,19 @@ class EventDataset(object):
         if self.is_test == False:
             if self.mode == 'train':
                 df = df[df['date'].isin(train_dates)]
-                df.describe().to_csv(self.stay_train_stat_path) # save the statistics information in train
+                df.describe().to_csv(self.stay_train_stat_path)
             elif self.mode == 'val':
                 df = df[df['date'].isin(val_dates)]
-                df.describe().to_csv(self.stay_val_stat_path) # save the statistics information in train
+                df.describe().to_csv(self.stay_val_stat_path)
             elif self.mode == 'test':
                 df = df[df['date'].isin(test_dates)]
-                df.describe().to_csv(self.stay_test_stat_path) # save the statistics information in train
+                df.describe().to_csv(self.stay_test_stat_path)
             else:
                 raise RuntimeError('please specify a mode')
 
         # contruct dataset parallel
         u_lst = df['uid'].unique()
-        # u_lst = u_lst[: int(len(u_lst) / 10)]
+
         num_thread = self.params['num_thread']
         n = len(u_lst)
         task_num = n // num_thread
@@ -470,9 +453,9 @@ class EventDataset(object):
 def get_params():
     parser = argparse.ArgumentParser()
     # dataset parameters
-    parser.add_argument('--fin',  type=str, default=ws + '/data/raw/HighPrev/')
+    parser.add_argument('--fin',  type=str, default=ws + '/data/raw/NUMOSIM/')
     parser.add_argument('--day_window', type=int, default=2)
-    parser.add_argument('--data_name', type=str, default='9_9_HighPrev')
+    parser.add_argument('--data_name', type=str, default='test_dataset') 
     is_test = True if platform.system() == 'Windows' else False
     # is_test = True
     parser.add_argument('--is_test', type=bool, default=is_test)

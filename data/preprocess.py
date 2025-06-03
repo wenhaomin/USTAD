@@ -15,36 +15,26 @@ sys.path.extend([os.path.join(root, name) for root, dirs, _ in os.walk(file) for
 import numpy as np
 import pandas as pd
 import pickle as pk
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import multiprocessing
-from tqdm import tqdm
 from utils.util import ws
-from sklearn.neighbors import BallTree
-from scipy import stats
 import datetime
 
 
-def pre_process(fin, fout, mode, first_day,is_test = False): #exist_anomalies = True if the data is injected with anomalies
+def pre_process(fin, fout, mode, first_day): 
     print('Raw input file:', fin)
 
     # read parquet files
     if mode == 'test':
-        exist_anomalies = True
         datapath = fin + 'stay_points_test_anomalous.parquet'
     elif mode == 'train':
-        exist_anomalies = False
         datapath = fin + 'stay_points_train.parquet'
 
-    
     stay = pd.read_parquet(datapath, engine='pyarrow')
-    # drop rows where agent_id == 99181
-    stay = stay[stay['agent_id'] != 99181]
+
 
     if 'anomaly' and 'anomaly_type' in stay.columns:
-        stay = stay.rename(columns={'anomaly': 'gt'})
-        stay['gt'] = stay['gt'].astype(int)
+        stay['label'] = stay['anomaly'].astype(int)
     else:
-        stay['gt'] = 0
+        stay['label'] = 0
         stay['anomaly_type'] = 0
     stay['start_datetime'] = pd.to_datetime(stay['start_datetime']).dt.tz_localize(None)
     stay['end_datetime'] = pd.to_datetime(stay['end_datetime']).dt.tz_localize(None)
@@ -64,8 +54,7 @@ def pre_process(fin, fout, mode, first_day,is_test = False): #exist_anomalies = 
     print('Number of Records after merging:', len(stay))
     print('Number of unique agents:', len(stay['agent_id'].unique()))
 
-    # compute stay_time
-    stay['stay_time'] = (stay['end_datetime'] - stay['start_datetime']).dt.total_seconds() / 60
+    stay['stay_duration'] = (stay['end_datetime'] - stay['start_datetime']).dt.total_seconds() / 60
     
     print('Expand basic information...')
 
@@ -86,7 +75,7 @@ def pre_process(fin, fout, mode, first_day,is_test = False): #exist_anomalies = 
                                 'longitude': 'lng', 'agent_id': 'uid', 
                                 'end_datetime': 'end_time', 'start_datetime': 'start_time'})
     # sort data by user, date, user, and time
-    stay = stay[['uid', 'lat', 'lng', 'poi_id', 'start_time', 'stay_time','poi', 'day', 'date', 'start_hour', 'start_time_minute','gt','anomaly_type']] # removing end_time column
+    stay = stay[['uid', 'lat', 'lng', 'poi_id', 'start_time', 'stay_duration','poi', 'day', 'date', 'start_hour', 'start_time_minute','label','anomaly_type']] # removing end_time column
     stay = stay.sort_values(by=['uid', 'date', 'start_time'])
 
     save_path = fout + '/stay_{}.csv'.format(mode)
@@ -94,12 +83,6 @@ def pre_process(fin, fout, mode, first_day,is_test = False): #exist_anomalies = 
     # save the statistics information
     stay_stat_path = fin + '/stay_describle_{}.csv'.format(mode)
     stay.describe().to_csv(stay_stat_path)
-    # processing gts agents list
-    gts = stay[stay['gt'] == 1]
-    if gts is not None:
-        gtsagents = gts['uid'].unique()
-        print('Number of gts agents:', len(gtsagents))
-        np.save(fout + '/gtsagents_{}.npy'.format(mode), gtsagents)
 
     return stay
 
@@ -107,11 +90,11 @@ def pre_process(fin, fout, mode, first_day,is_test = False): #exist_anomalies = 
 
 if __name__ == "__main__":
     if 1:
-        fin = ws + '/data/raw/HighPrev/'
-        fout = ws + '/data/raw/HighPrev/'
+        fin = ws + '/data/raw/NUMOSIM/'
+        fout = ws + '/data/raw/NUMOSIM/'
         for mode in ['train', 'test']:
             print('Processing {} data...'.format(mode))
-            df = pre_process(fin=fin, fout=fout, mode = mode, first_day="2024-01-01", is_test=False)
+            df = pre_process(fin=fin, fout=fout, mode = mode, first_day="2024-01-01")
 
 
 

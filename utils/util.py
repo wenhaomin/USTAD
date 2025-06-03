@@ -20,12 +20,10 @@ def get_workspace():
 ws =  get_workspace()
 
 
+
 """record the platform for resoures we have"""
 #  different platforms may have different output directory strategy
 Platforms = edict()
-Platforms.la3 = 'Linux-5.4.0-139-generic-x86_64-with-glibc2.31' # for la3
-Platforms.psc = 'Linux-4.18.0-477.27.1.el8_8.x86_64-x86_64-with-glibc2.28' # for psc
-
 
 def get_datetime_key():
     """ Get a string key based on current datetime. """
@@ -65,7 +63,7 @@ def dict_merge(dict_list = []):
         dict_ = {**dict_, **dic}
     return dict_
 
-# trial2 data comes from Los Angeles (UTM region: 10)
+
 # crs code of a region: (for LA search WGS_1984_UTM_Zone_10N)
 #Projected Coordinate Systems: https://developers.arcgis.com/javascript/3/jshelp/pcs.htm
 # Geographic Coordinate Systems: https://developers.arcgis.com/javascript/3/jshelp/gcs.htm
@@ -115,7 +113,6 @@ def min_max_norm(df, column):
     """
     min_val = df[column].min()
     max_val = df[column].max()
-    # df[column] = (df[column] - min_val) / (max_val - min_val)
     normed = (df[column] - min_val) / (max_val - min_val)
     return normed
 
@@ -196,10 +193,7 @@ def get_common_params():
     parser.add_argument('--is_test', type=bool, default=False, help='test the code')
 
     # dataset
-    # parser.add_argument('--min_task_num', type=int, default=0, help = 'minimal number of task')
-    # parser.add_argument('--max_task_num',  type=int, default=25, help = 'maxmal number of task')
-    parser.add_argument('--dataset', default='trial1', type=str, help='training dataset')
-    # parser.add_argument('--pad_value', type=int, default=24, help='logistics: max_num - 1, pd: max_num + 1')
+    parser.add_argument('--dataset', default='NUMOSIM', type=str, help='training dataset')
 
     ## for model setting
     parser.add_argument('--d_h', default=32, type=int, help='hidden dimension of the data')
@@ -212,7 +206,7 @@ def get_common_params():
     parser.add_argument('--seed', type=int, default=2021, metavar='S', help='random seed (default: 6)')
     parser.add_argument('--wd', type=float, default=1e-5, help='weight decay (default: 1e-5)')
     parser.add_argument('--early_stop', type=int, default=5, help='early stop at')
-    parser.add_argument('--early_stop_metric', type=str, default='loss', help='metric for early stop') #stay_duration-rmse
+    parser.add_argument('--early_stop_metric', type=str, default='loss', help='metric for early stop') 
     parser.add_argument('--early_stop_start_epoch', type=int, default=0, help='the epoch that starts the early stop')
 
     parser.add_argument('--workers', type=int, default=16, help='number of data loading workers (default: 4)')
@@ -259,7 +253,6 @@ def train_val_test(train_loader, val_loader, test_loader, model, device, process
 
     # model path
     model_name = model.model_file_name()
-    # model_path = ws + f'/data/dataset/{params["dataset"]}/model/{params["model"]}/{model_name}-{date_key}.pkl'
     model_path = ws + f'/output/model/{model_name}-{date_key}.pkl'
     params['model_path'] = model_path
 
@@ -379,7 +372,6 @@ def train_val_test(train_loader, val_loader, test_loader, model, device, process
     print('forecast_path: ', forecast_path)
 
     # update the best val results to params
-    # temp = {f'val_{k}':v for k,v in best_val_result.to_dict().items()}
     temp = {f'val_{k}':v for k,v in best_val_result.items()}
 
     params = dict_merge([params, temp])
@@ -397,12 +389,7 @@ def get_dataset_path(params = {}):
     test_path = file + f'/test.npy'
     return train_path, val_path, test_path
 
-# gpu_id = GPU().get_usefuel_gpu(max_memory=6000, condidate_gpu_id=[0,1,2,3,4,6,7,8])
-# config.gpu_id = gpu_id
-# if gpu_id != None:
-#     cuda_id = GpuId2CudaId(gpu_id)
-#     torch.cuda.set_device(f"cuda:{cuda_id}")
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 def run(params, DATASET, PROCESS_BATCH, TEST_MODEL, collate_fn = None):
 
 
@@ -435,8 +422,7 @@ def run(params, DATASET, PROCESS_BATCH, TEST_MODEL, collate_fn = None):
     model_save2file = params.get('model_save2file', None) # one can directly pass the model and save2file function to the parameter, without register in the utils
     if  model_save2file is not None:
         model, save2file = model_save2file
-    # else:
-    #     model, save2file = get_model_function(params['model'])
+
     model = model(params).float()
     result_dict = train_val_test(train_loader, val_loader, test_loader, model, device, PROCESS_BATCH, TEST_MODEL, params, save2file)
     params = dict_merge([params, result_dict])

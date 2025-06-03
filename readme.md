@@ -6,11 +6,9 @@ pip install -r requirements.txt
 
 
 # Data Preprocessing
-1. preprocess_{datasetname}.py: used for preprocessing and obtaining necessary features
-2. dataset_{datasetname}.py: used to create train, val, test data
+1. preprocess.py: used for preprocessing and obtaining necessary features
+2. dataset.py: used to create train, val, test data
 
-## datasetnames:
-1. HighPrev: this version can be used for format similar to NUMOSIM dataset
 
 # Run
 
@@ -19,11 +17,14 @@ python algorithm/ustad/train.py
 
 After training, the metrics, model, and forecast results will be saved in ./output/
 
-## Anomaly detection
+## Anomaly detection module (anomaly_detection)
 
-# AD module (AD_prediction_error_uc)
-single_model.py: 
+data_funcs.py: 
 
-1. the file construct the inference data (if not already constructed), loads the trained model and do inference. 
+1. the file contains the function to construct the inference data for test data, to get predicted values and uncertainty estimation.
 
-3. settings_map is used to choose which dataset and under which setting you want to do inference on. When you load the trained model, if it has uncertainty module, UC_mode = 'all'; otherwise, UC_mode = "None" for vanilla transformer.
+2. settings_map is used to choose which dataset and under which setting you want to do inference on. When you load the trained model, if it has uncertainty module, UC_mode = 'all'; otherwise, UC_mode = "None" for vanilla transformer.
+
+inference.py:
+
+1. the file loads the trained mode, contucts infernece and finally perform anomaly detection.
