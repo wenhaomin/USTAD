@@ -345,7 +345,7 @@ class USTAD(nn.Module):
 
     def model_file_name(self):
         file_name = '+'.join([f'{k}-{self.args[k]}' for k in ['d_h']])
-        file_name = f'dual_tr_au_eu_-{file_name}'
+        file_name = f'ustad_-{file_name}'
         return file_name
 
 
