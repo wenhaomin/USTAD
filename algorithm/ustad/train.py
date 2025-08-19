@@ -99,7 +99,7 @@ def test_model_with_loss(model, test_loader, device, params, save2file, mode):
     return evaluators[-1]
 
 def main(params):
-    params['model'] = 'vanilla Transformer'
+    params['model'] = 'USTAD'
     params['model_save2file'] = (USTAD, save2file)
     norm_path = ws + f'/data/dataset/{params["dataset"]}/stay_train_describle.csv'
     params['norm_path'] = norm_path
